@@ -1,12 +1,10 @@
 import random
 import re
+import os
 
 def clean_file(text):
 	file = open(text, "r+")
 	file_data = file.read()
-	# for i in range(len(file_data) - 1):
-	# 	if file_data[i: i + 2] == "  ":
-	# 		file_data = file_data[:i] + " " + file_data[i + 2:]
 	file_data = re.sub(" +", " ", file_data).lstrip()
 	file.seek(0)
 	file.truncate()
@@ -15,41 +13,19 @@ def clean_file(text):
 def make_markov(text):
 	file = open(text)
 	file_data = file.read()
+	modified_data = file_data.replace("\n", "\n ")
 	chain = {}
-
-	def find_end(file_data):
-		if file_data[0] == "\n":
-			return 1
-		space = file_data.find(" ", 1)
-		newline = file_data.find("\n", 1)
-		if space == -1:
-			if newline == -1:
-				return len(file_data)
-			else:
-				return newline
+	words = modified_data.split(" ")
+	w1, w2 = None, None
+	chain[(w1, w2)] = chain.get((w1, w2), []) + [words[0]]
+	for index in range(len(words)):
+		word = words[index]
+		w1, w2 = w2, word
+		if index + 1 < len(words):
+			next_word = words[index + 1]
+			chain[(w1, w2)] = chain.get((w1, w2), []) + [next_word]
 		else:
-			if newline == -1:
-				return space
-			else:
-				return min(newline, space)
-
-	while file_data:
-		end_character = find_end(file_data)
-		this_word = file_data[:end_character]
-
-		further = file_data[end_character:]
-		if further:
-			next_end_character = find_end(further)
-			next_word = further[:next_end_character]
-			if next_word[0] == " ":
-				next_word = next_word[1:]
-			chain[this_word] = chain.get(this_word, []) + [next_word]
-		else:
-			chain[this_word] = chain.get(this_word, []) + [None]
-		file_data = file_data[end_character:]
-		if file_data and file_data[0] == " ":
-			file_data = file_data[1:]
-
+			chain[(w1, w2)] = chain.get((w1, w2), []) + [None]
 	return chain
 
 def combine_markov(markov_list):
@@ -61,28 +37,25 @@ def combine_markov(markov_list):
 
 def make_poem(max_length, chain):
 	assert max_length > 0, "Length of poem must be a nonnegative integer!"
-	assert len(chain.get("\n", [])) > 0, "Chain must come from an input of more than one line!"
-	previous_word = chain.get("\n", [])[random.randrange(0, len(chain.get("\n", [])))]
-	if previous_word == None:
-		return make_poem(max_length, chain)
-	poem = previous_word + " "
+	store_max = max_length
+	prev1, prev2 = None, None
+	poem = ""
 	while max_length:
-		possible = chain.get(previous_word, [])
-		if possible == []:
-			""" LOL I HID THIS ERROR """
-			return make_poem(max_length, chain)
-		else:
-			new_word = possible[random.randrange(0, len(possible))]
+		possible_words = chain.get((prev1, prev2), [])
+		assert len(possible_words) > 0, "Strange Error Occurred!"
+		new_word = random.choice(possible_words)
 		if new_word == None:
-			return poem
-		elif new_word == "\n":
-			poem = poem[:-1]
+			break
+		elif "\n" in new_word:
 			poem += new_word
 		else:
 			poem += new_word + " "
-		previous_word = new_word
+		prev1, prev2 = prev2, new_word
 		max_length -= 1
-	return poem
+	if poem.lstrip():
+		return poem
+	else:
+		return new_make_poem(store_max, chain)
 
 def poetry(max_length, texts):
 	for text in texts:
@@ -91,7 +64,4 @@ def poetry(max_length, texts):
 	chain = combine_markov(chains)
 	return make_poem(max_length, chain)
 
-# print(poetry(250, ["davidessay.txt"]))
-# print(poetry(100, ["shakespeare.txt"]))
-# print(poetry(100, ["eliot.txt"]))
-print(poetry(20, ["rupis/rupi1.txt", "rupis/rupi2.txt", "rupis/rupi3.txt", "rupis/rupi4.txt", "rupis/rupi5.txt", "rupis/rupi6.txt", "rupis/rupi7.txt", "rupis/rupi8.txt", "rupis/rupi9.txt", "rupis/rupi10.txt", "rupis/rupi11.txt", "rupis/rupi12.txt", "rupis/rupi13.txt", "rupis/rupi14.txt", "rupis/rupi15.txt", "rupis/rupi16.txt", "rupis/rupi17.txt", "rupis/rupi18.txt", "rupis/rupi19.txt", "rupis/rupi20.txt"]))
+print(poetry(20, ["rupis/" + file for file in os.listdir(os.getcwd()+"/rupis/")]))
