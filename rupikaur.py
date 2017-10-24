@@ -55,7 +55,7 @@ def make_poem(max_length, chain):
 	if poem.lstrip():
 		return poem
 	else:
-		return new_make_poem(store_max, chain)
+		return make_poem(store_max, chain)
 
 def poetry(max_length, texts):
 	for text in texts:
